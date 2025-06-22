@@ -1,4 +1,5 @@
 // New code update 6/17/2025
+// Updated 6/22/2025 for secure functions
 // Removed dependency on legacy Windows functions. 
 // Added string functions for other uses. 
 // Some code below was written with the assistance of ChatGPT
@@ -103,7 +104,7 @@ void SaveIniFile() {
 }
 
 void SetIniFile(const char* szFileName) {
-    strncpy(m_szFileName, szFileName, MAX_INI - 1);
+    strncpy_s(m_szFileName, MAX_INI, szFileName, _TRUNCATE);
     LoadIniFile();
 }
 
@@ -149,10 +150,10 @@ bool get_config_bool(const char* section, const char* key, bool defval) {
 char* get_config_string(const char* section, const char* key, const char* defval) {
     std::string val = get_value(section, key, defval);
     char* res = new char[val.size() + 1];
-    std::strcpy(res, val.c_str());
-    
-   // Note: Caller must delete[] the returned pointer!
-   return res;
+    strcpy_s(res, val.size() + 1, val.c_str());
+
+    // Caller must delete[] the returned pointer!
+    return res;
 }
 
 void set_config_string(const char* section, const char* key, const char* val) {
