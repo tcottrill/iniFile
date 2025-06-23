@@ -92,14 +92,16 @@ void SaveIniFile() {
     std::ofstream file(m_szFileName);
     for (const auto& sec : ini_data) {
         if (!sec.first.empty())
-            file << "[" << sec.first << "]";
+            file << "[" << sec.first << "]\n";  // newline after section
+
         for (const auto& entry : sec.second) {
             if (entry.is_comment || entry.key.empty())
-                file << entry.original_line << "";
+                file << entry.original_line << "\n";  // ensure comment ends in newline
             else
-                file << entry.key << "=" << entry.value << "";
+                file << entry.key << "=" << entry.value << "\n";  // newline after key=value
         }
-        file << "";
+
+        file << "\n"; // add blank line after each section for readability
     }
 }
 
