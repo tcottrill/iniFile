@@ -1,7 +1,11 @@
 // New code update 6/17/2025
-// Updated 6/22/2025 for secure functions
 // Removed dependency on legacy Windows functions. 
 // Added string functions for other uses. 
+// Updated 6/22/2025 for secure functions and bugfixes
+// Updated 6/23/2025 Fixed key space equals space value or space space etc value not reading correctly
+// Updated 6/23/2025 Fixed comments inline with the key equals value keypair screwing things up
+// Updated 6/23/2025 Fixed floats being stored to several decimal places with zeros added 
+
 // Some code below was written with the assistance of ChatGPT
 
 /*
@@ -76,12 +80,33 @@ void LoadIniFile() {
             section = trimmed.substr(1, trimmed.size() - 2);
             ini_data[section]; // Ensure section exists
         } else {
-            size_t eq = trimmed.find('=');
+            size_t eq = line.find('=');
             if (eq != std::string::npos) {
-                std::string key = trim(trimmed.substr(0, eq));
-                std::string value = trim(trimmed.substr(eq + 1));
-                ini_data[section].push_back({ key, value, line, false });
-            } else {
+                std::string key = line.substr(0, eq);
+                std::string value = line.substr(eq + 1);
+
+                // Trim both
+                key.erase(0, key.find_first_not_of(" \t"));
+                key.erase(key.find_last_not_of(" \t") + 1);
+                value.erase(0, value.find_first_not_of(" \t"));
+
+                // Strip inline comment in value (look for ';' or '#')
+                size_t comment_pos = value.find_first_of(";#");
+                if (comment_pos != std::string::npos)
+                    value = value.substr(0, comment_pos);
+
+                // Final trim after comment removal
+                value.erase(value.find_last_not_of(" \t") + 1);
+
+                // Reject key or value if they contain spaces
+                if (key.find(' ') != std::string::npos || value.find(' ') != std::string::npos) {
+                    ini_data[section].push_back({ "", "", line, true }); // treat as invalid
+                }
+                else {
+                    ini_data[section].push_back({ key, value, line, false });
+                }
+            }
+            else {
                 ini_data[section].push_back({ "", "", line, true });
             }
         }
@@ -101,7 +126,7 @@ void SaveIniFile() {
                 file << entry.key << "=" << entry.value << "\n";  // newline after key=value
         }
 
-        file << "\n"; // add blank line after each section for readability
+        file << ""; // add blank line after each section for readability
     }
 }
 
@@ -167,7 +192,15 @@ void set_config_int(const char* section, const char* key, int val) {
 }
 
 void set_config_float(const char* section, const char* key, float val) {
-    set_config_string(section, key, std::to_string(val).c_str());
+    std::ostringstream oss;
+    oss << std::fixed << val;
+
+    std::string str = oss.str();
+    str.erase(str.find_last_not_of('0') + 1); // remove trailing 0s
+    if (!str.empty() && str.back() == '.')    // remove trailing .
+        str.pop_back();
+
+    set_config_string(section, key, str.c_str());
 }
 
 void set_config_bool(const char* section, const char* key, bool val) {
@@ -200,7 +233,15 @@ void set_config_int(const std::string& section, const std::string& key, int valu
 }
 
 void set_config_float(const std::string& section, const std::string& key, float value) {
-    set_config_float(section.c_str(), key.c_str(), value);
+    std::ostringstream oss;
+    oss << std::fixed << value;
+
+    std::string str = oss.str();
+    str.erase(str.find_last_not_of('0') + 1);
+    if (!str.empty() && str.back() == '.')
+        str.pop_back();
+
+    set_config_string(section.c_str(), key.c_str(), str.c_str());
 }
 
 void set_config_bool(const std::string& section, const std::string& key, bool value) {
